@@ -35,6 +35,23 @@ export const calculateDailySpending = (
     .reduce((sum, expense) => sum + expense.amount, 0);
 };
 
+export const calculateProjectedMonthlyExpense = (
+  expenses: Expense[],
+): number => {
+  const avgDailySpending = calculateAverageDailySpending(expenses);
+  const daysInMonth =
+    differenceInDays(endOfMonth(new Date()), startOfMonth(new Date())) + 1;
+  return avgDailySpending * daysInMonth;
+};
+
+export const calculateAverageDailySpending = (expenses: Expense[]): number => {
+  const today = new Date();
+  const monthStart = startOfMonth(today);
+  const daysPassed = differenceInDays(today, monthStart) + 1;
+  const monthlySpending = calculateMonthlySpending(expenses);
+  return monthlySpending / daysPassed;
+};
+
 export const calculateMonthlySpending = (expenses: Expense[]): number => {
   const today = new Date();
   const startMonth = startOfMonth(today);
@@ -130,7 +147,7 @@ export const calculateBudgetScore = (
   return Math.max(0, Math.min(50, score)); // Worst
 };
 
-export const exportToCSV = (expenses: Expense[]): string => {
+export const generateCSV = (expenses: Expense[]): string => {
   const headers = ["Date", "Amount", "Category", "Description"];
   const rows = expenses.map((expense) => [
     new Date(expense.date).toLocaleDateString(),

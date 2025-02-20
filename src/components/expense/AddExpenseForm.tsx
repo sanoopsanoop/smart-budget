@@ -3,20 +3,18 @@ import { cn } from "@/lib/utils";
 import NumericKeypad from "./NumericKeypad";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useExpenseStore, EXPENSE_CATEGORIES } from "@/stores/expenseStore";
-import {
-  calculateMonthlySpending,
-  calculateDailyLimit,
-  getBudgetStatus,
-  calculateDailySpending,
-  calculateBudgetScore,
-  calculateSpendingTrend,
-} from "@/lib/expense-utils";
-import { endOfMonth, differenceInDays } from "date-fns";
+import { EXPENSE_CATEGORIES } from "@/stores/expenseStore";
 import { Input } from "@/components/ui/input";
 import { RotateCcw, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ResetConfirmationDialog from "./ResetConfirmationDialog";
+import {
+  getBudgetStatus,
+  calculateDailyLimit,
+  calculateAverageDailySpending,
+  calculateProjectedMonthlyExpense,
+} from "@/lib/expense-utils";
+import { differenceInDays, endOfMonth } from "date-fns";
 
 interface AddExpenseFormProps {
   onSubmit: (data: {
@@ -25,10 +23,22 @@ interface AddExpenseFormProps {
     date: Date;
     description?: string;
   }) => void;
+  budgetScore?: number;
+  remainingBudget?: number;
+  monthlyLimit?: number;
+  expenses?: Array<{
+    amount: number;
+    date: Date;
+  }>;
 }
 
-const AddExpenseForm = ({ onSubmit }: AddExpenseFormProps) => {
-  const { expenses, monthlyLimit } = useExpenseStore();
+const AddExpenseForm = ({
+  onSubmit,
+  budgetScore = 0,
+  remainingBudget = 0,
+  monthlyLimit = 1000,
+  expenses = [],
+}: AddExpenseFormProps) => {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(
@@ -38,35 +48,16 @@ const AddExpenseForm = ({ onSubmit }: AddExpenseFormProps) => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
 
-  // Calculate budget metrics
-  const monthlySpending = calculateMonthlySpending(expenses);
-  const remainingBudget = monthlyLimit - monthlySpending;
-  const dailyLimit = calculateDailyLimit(remainingBudget);
-  const dailySpending = calculateDailySpending(expenses, new Date());
-  const spendingTrend = calculateSpendingTrend(expenses);
-
-  // Calculate days left in month
-  const today = new Date();
-  const endOfCurrentMonth = endOfMonth(today);
-  const daysLeft = differenceInDays(endOfCurrentMonth, today) + 1;
-
   // Calculate progress percentage and status
-  const progressPercentage = Math.min((dailySpending / dailyLimit) * 100, 100);
   const monthlyProgressPercentage = Math.min(
-    (monthlySpending / monthlyLimit) * 100,
+    ((monthlyLimit - remainingBudget) / monthlyLimit) * 100,
     100,
   );
-  const budgetStatus = getBudgetStatus(
-    monthlySpending,
-    monthlyLimit,
-    spendingTrend,
-  );
 
-  // Calculate score based on monthly spending and trend
-  const score = calculateBudgetScore(
-    monthlySpending,
+  const budgetStatus = getBudgetStatus(
+    monthlyLimit - remainingBudget,
     monthlyLimit,
-    spendingTrend,
+    0, // Default trend
   );
 
   const handleNumberClick = (num: string) => {
@@ -100,65 +91,106 @@ const AddExpenseForm = ({ onSubmit }: AddExpenseFormProps) => {
 
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-[40px] overflow-hidden">
-      <div
-        className={cn("p-8 space-y-4 transition-colors duration-300")}
-        style={{ backgroundColor: budgetStatus.color }}
-      >
-        <div className="flex justify-between items-center text-white">
+      <div className="bg-white p-8 space-y-4">
+        <div className="flex justify-between items-center">
           <h1 className="text-4xl font-bold">Smart Budget</h1>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowResetDialog(true)}
-            className="text-white hover:text-gray-200"
+            className="text-gray-600 hover:text-gray-800"
           >
             <RotateCcw className="h-5 w-5" />
           </Button>
         </div>
 
-        <div className="flex items-center justify-between text-white">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="h-6 w-6" />
-            <span className="text-2xl font-bold">{score}</span>
+            <span className="text-2xl font-bold">{budgetScore}</span>
           </div>
-          <div className="text-lg font-semibold capitalize">
+          <div
+            className={cn(
+              "text-lg font-semibold capitalize px-4 py-1 rounded-full",
+              budgetStatus.status === "excellent"
+                ? "bg-green-100 text-green-700"
+                : budgetStatus.status === "good"
+                  ? "bg-blue-100 text-blue-700"
+                  : budgetStatus.status === "bad"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-red-100 text-red-700",
+            )}
+          >
             {budgetStatus.status}
           </div>
         </div>
 
-        {/* Monthly Progress Bar */}
-        <div className="space-y-1">
-          <div className="text-white/90 text-sm">Monthly Budget</div>
-          <div className="w-full h-4 bg-black/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white"
-              style={{ width: `${monthlyProgressPercentage}%` }}
-            />
+        {/* Budget Information */}
+        <div className="bg-white rounded-2xl p-6 space-y-6 shadow-lg">
+          {/* Monthly Progress Bar */}
+          <div className="space-y-2">
+            <div className="text-gray-600 font-medium">Monthly Budget</div>
+            <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all",
+                  monthlyProgressPercentage > 90
+                    ? "bg-red-500"
+                    : monthlyProgressPercentage > 70
+                      ? "bg-yellow-500"
+                      : "bg-green-500",
+                )}
+                style={{ width: `${monthlyProgressPercentage}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-sm text-gray-600">
+              <div>₹{(monthlyLimit - remainingBudget).toFixed(0)} spent</div>
+              <div>₹{monthlyLimit.toFixed(0)} limit</div>
+            </div>
           </div>
-          <div className="flex justify-between text-white/90 text-sm">
-            <div>₹{monthlySpending.toFixed(0)}</div>
-            <div>₹{monthlyLimit.toFixed(0)}</div>
-          </div>
-        </div>
 
-        {/* Daily Progress Bar */}
-        <div className="space-y-1">
-          <div className="text-white/90 text-sm">Daily Budget</div>
-          <div className="w-full h-4 bg-black/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white"
-              style={{ width: `${progressPercentage}%` }}
-            />
+          {/* Budget Details */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="col-span-2">
+              <div className="text-sm font-medium text-gray-500">
+                Projected Monthly
+              </div>
+              <div className="text-2xl font-bold text-gray-900">
+                ₹{calculateProjectedMonthlyExpense(expenses).toFixed(0)}
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  {calculateProjectedMonthlyExpense(expenses) > monthlyLimit
+                    ? "(Over budget)"
+                    : "(Within budget)"}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Remaining</div>
+              <div className="text-2xl font-bold text-green-600">
+                ₹{remainingBudget.toFixed(0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Days Left</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {differenceInDays(endOfMonth(new Date()), new Date()) + 1}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">
+                Daily Target
+              </div>
+              <div className="text-xl font-semibold text-gray-900">
+                ₹{calculateDailyLimit(remainingBudget).toFixed(0)}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-500">Avg Spent</div>
+              <div className="text-xl font-semibold text-gray-900">
+                ₹{calculateAverageDailySpending(expenses).toFixed(0)}
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between text-white/90 text-sm">
-            <div>₹{dailySpending.toFixed(0)}</div>
-            <div>₹{dailyLimit.toFixed(0)}</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-white">
-          <span className="text-sm">Days Left:</span>
-          <span className="text-lg font-semibold">{daysLeft}</span>
         </div>
       </div>
 

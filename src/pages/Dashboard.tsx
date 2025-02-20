@@ -1,15 +1,18 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Settings, Trash2, RotateCcw } from "lucide-react";
+import { saveAs } from "file-saver";
 import BudgetSetup from "@/components/expense/BudgetSetup";
 import ExpenseLineChart from "@/components/expense/ExpenseLineChart";
 import ExpensePieChart from "@/components/expense/ExpensePieChart";
+import ExpenseComparisonChart from "@/components/expense/ExpenseComparisonChart";
 import ResetConfirmationDialog from "@/components/expense/ResetConfirmationDialog";
 
 import {
   calculateMonthlySpending,
   calculateBudgetScore,
-  exportToCSV,
+  calculateSpendingTrend,
+  generateCSV,
 } from "@/lib/expense-utils";
 import { useExpenseStore } from "@/stores/expenseStore";
 
@@ -25,19 +28,19 @@ const Dashboard = () => {
   const [showResetDialog, setShowResetDialog] = React.useState(false);
 
   const handleExport = () => {
-    const csv = exportToCSV(expenses);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "expenses.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const csv = generateCSV(expenses);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    saveAs(blob, `expenses_${new Date().toISOString().split("T")[0]}.csv`);
   };
 
   const monthlySpending = calculateMonthlySpending(expenses);
   const remainingBudget = monthlyLimit - monthlySpending;
-  const budgetScore = calculateBudgetScore(monthlyLimit, expenses);
+  const spendingTrend = calculateSpendingTrend(expenses);
+  const budgetScore = calculateBudgetScore(
+    monthlySpending,
+    monthlyLimit,
+    spendingTrend,
+  );
 
   return (
     <div className="p-4 space-y-6">
@@ -78,6 +81,7 @@ const Dashboard = () => {
       </div>
 
       <div className="space-y-4">
+        <ExpenseComparisonChart data={expenses} monthlyLimit={monthlyLimit} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ExpenseLineChart data={expenses} />
           <ExpensePieChart data={expenses} />

@@ -5,6 +5,7 @@ import { useExpenseStore } from "@/stores/expenseStore";
 import {
   calculateMonthlySpending,
   calculateBudgetScore,
+  calculateSpendingTrend,
   Expense,
 } from "@/lib/expense-utils";
 
@@ -14,7 +15,12 @@ const AddExpense = () => {
 
   const monthlySpending = calculateMonthlySpending(expenses);
   const remainingBudget = monthlyLimit - monthlySpending;
-  const budgetScore = calculateBudgetScore(monthlyLimit, expenses);
+  const spendingTrend = calculateSpendingTrend(expenses);
+  const budgetScore = calculateBudgetScore(
+    monthlySpending,
+    monthlyLimit,
+    spendingTrend,
+  );
 
   const handleAddExpense = (expense: Omit<Expense, "id">) => {
     addExpense(expense);
@@ -29,6 +35,7 @@ const AddExpense = () => {
         budgetScore={budgetScore}
         remainingBudget={remainingBudget}
         monthlyLimit={monthlyLimit}
+        expenses={expenses}
       />
     </div>
   );
