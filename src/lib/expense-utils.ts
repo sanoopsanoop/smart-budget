@@ -147,7 +147,66 @@ export const calculateBudgetScore = (
   return Math.max(0, Math.min(50, score)); // Worst
 };
 
-export const generateCSV = (expenses: Expense[]): string => {
+interface ExportOptions {
+  format: "csv" | "json";
+  dateFormat?: string;
+  includeDescription?: boolean;
+}
+
+export const exportExpenses = async (
+  expenses: Expense[],
+  options: ExportOptions = { format: "csv", includeDescription: true },
+): Promise<{ data: string; filename: string }> => {
+  // Check if running on mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile && navigator.share) {
+    try {
+      const data =
+        options.format === "csv"
+          ? generateCSV(expenses, options.includeDescription)
+          : JSON.stringify(expenses, null, 2);
+      const blob = new Blob([data], {
+        type: options.format === "csv" ? "text/csv" : "application/json",
+      });
+      const file = new File(
+        [blob],
+        `expenses_${new Date().toISOString().split("T")[0]}.${options.format}`,
+        {
+          type: options.format === "csv" ? "text/csv" : "application/json",
+        },
+      );
+
+      await navigator.share({
+        title: "Export Expenses",
+        text: "Here are your exported expenses",
+        files: [file],
+      });
+
+      return { data, filename: file.name };
+    } catch (error) {
+      console.error("Share failed:", error);
+      // Fall back to regular export if sharing fails
+    }
+  }
+  const timestamp = new Date().toISOString().split("T")[0];
+  let data: string;
+  let filename: string;
+
+  if (options.format === "csv") {
+    data = generateCSV(expenses, options.includeDescription);
+    filename = `expenses_${timestamp}.csv`;
+  } else {
+    data = JSON.stringify(expenses, null, 2);
+    filename = `expenses_${timestamp}.json`;
+  }
+
+  return { data, filename };
+};
+
+export const generateCSV = (
+  expenses: Expense[],
+  includeDescription = true,
+): string => {
   const headers = ["Date", "Amount", "Category", "Description"];
   const rows = expenses.map((expense) => [
     new Date(expense.date).toLocaleDateString(),
@@ -159,13 +218,28 @@ export const generateCSV = (expenses: Expense[]): string => {
   return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
 };
 
-export const saveToLocalStorage = (key: string, data: any): void => {
-  localStorage.setItem(key, JSON.stringify(data));
+import { Preferences } from "@capacitor/preferences";
+
+export const saveToLocalStorage = async (
+  key: string,
+  data: any,
+): Promise<void> => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+  await Preferences.set({
+    key,
+    value: JSON.stringify(data),
+  });
 };
 
-export const loadFromLocalStorage = (key: string): any => {
-  const data = localStorage.getItem(key);
-  return data ? JSON.parse(data) : null;
+export const loadFromLocalStorage = async (key: string): Promise<any> => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    const data = localStorage.getItem(key);
+    if (data) return JSON.parse(data);
+  }
+  const { value } = await Preferences.get({ key });
+  return value ? JSON.parse(value) : null;
 };
 
 export const validatePassword = (input: string): boolean => {

@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Settings, Trash2, RotateCcw } from "lucide-react";
 import { saveAs } from "file-saver";
+import { toast } from "@/components/ui/use-toast";
 import BudgetSetup from "@/components/expense/BudgetSetup";
 import ExpenseLineChart from "@/components/expense/ExpenseLineChart";
 import ExpensePieChart from "@/components/expense/ExpensePieChart";
@@ -27,7 +28,31 @@ const Dashboard = () => {
   const [showBudgetSetup, setShowBudgetSetup] = React.useState(false);
   const [showResetDialog, setShowResetDialog] = React.useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    try {
+      const { data, filename } = await exportExpenses(expenses, {
+        format: "csv",
+        includeDescription: true,
+      });
+
+      // For browser downloads
+      if (typeof window !== "undefined" && window.navigator) {
+        const blob = new Blob([data], { type: "text/csv;charset=utf-8" });
+        saveAs(blob, filename);
+      }
+
+      toast({
+        title: "Export Successful",
+        description: `Expenses exported to ${filename}`,
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "There was an error exporting your expenses.",
+      });
+    }
     const csv = generateCSV(expenses);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     saveAs(blob, `expenses_${new Date().toISOString().split("T")[0]}.csv`);

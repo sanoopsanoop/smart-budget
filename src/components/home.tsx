@@ -47,7 +47,31 @@ const Home = () => {
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    try {
+      const { data, filename } = await exportExpenses(expenses, {
+        format: "csv",
+        includeDescription: true,
+      });
+
+      // For browser downloads
+      if (typeof window !== "undefined" && window.navigator) {
+        const blob = new Blob([data], { type: "text/csv;charset=utf-8" });
+        saveAs(blob, filename);
+      }
+
+      toast({
+        title: "Export Successful",
+        description: `Expenses exported to ${filename}`,
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Export Failed",
+        description: "There was an error exporting your expenses.",
+      });
+    }
     const csv = exportToCSV(expenses);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
