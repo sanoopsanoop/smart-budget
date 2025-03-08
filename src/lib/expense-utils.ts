@@ -218,7 +218,25 @@ export const generateCSV = (
   return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
 };
 
-import { Preferences } from "@capacitor/preferences";
+// Alias for backward compatibility
+export const exportToCSV = generateCSV;
+
+// Import Preferences from Capacitor if available
+let Preferences: any;
+try {
+  Preferences = require("@capacitor/preferences")?.Preferences;
+} catch (e) {
+  // Fallback for web
+  Preferences = {
+    set: async ({ key, value }: { key: string; value: string }) => {
+      localStorage.setItem(key, value);
+      return { value };
+    },
+    get: async ({ key }: { key: string }) => {
+      return { value: localStorage.getItem(key) };
+    },
+  };
+}
 
 export const saveToLocalStorage = async (
   key: string,
@@ -227,10 +245,12 @@ export const saveToLocalStorage = async (
   if (typeof window !== "undefined" && window.localStorage) {
     localStorage.setItem(key, JSON.stringify(data));
   }
-  await Preferences.set({
-    key,
-    value: JSON.stringify(data),
-  });
+  if (Preferences) {
+    await Preferences.set({
+      key,
+      value: JSON.stringify(data),
+    });
+  }
 };
 
 export const loadFromLocalStorage = async (key: string): Promise<any> => {
@@ -238,8 +258,11 @@ export const loadFromLocalStorage = async (key: string): Promise<any> => {
     const data = localStorage.getItem(key);
     if (data) return JSON.parse(data);
   }
-  const { value } = await Preferences.get({ key });
-  return value ? JSON.parse(value) : null;
+  if (Preferences) {
+    const { value } = await Preferences.get({ key });
+    return value ? JSON.parse(value) : null;
+  }
+  return null;
 };
 
 export const validatePassword = (input: string): boolean => {

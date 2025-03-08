@@ -72,7 +72,7 @@ const Home = () => {
         description: "There was an error exporting your expenses.",
       });
     }
-    const csv = exportToCSV(expenses);
+    const csv = generateCSV(expenses);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");

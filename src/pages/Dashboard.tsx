@@ -30,10 +30,9 @@ const Dashboard = () => {
 
   const handleExport = async () => {
     try {
-      const { data, filename } = await exportExpenses(expenses, {
-        format: "csv",
-        includeDescription: true,
-      });
+      const csv = generateCSV(expenses);
+      const filename = `expenses_${new Date().toISOString().split("T")[0]}.csv`;
+      const data = csv;
 
       // For browser downloads
       if (typeof window !== "undefined" && window.navigator) {
