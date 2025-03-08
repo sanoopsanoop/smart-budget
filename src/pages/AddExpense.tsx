@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AddExpenseForm from "@/components/expense/AddExpenseForm";
 import ExcelImport from "@/components/expense/ExcelImport";
+import SmsImport from "@/components/expense/SmsImport";
 import { useExpenseStore } from "@/stores/expenseStore";
 import {
   calculateMonthlySpending,
@@ -16,6 +17,7 @@ const AddExpense = () => {
   const navigate = useNavigate();
   const { expenses, monthlyLimit, addExpense } = useExpenseStore();
   const [showExcelImport, setShowExcelImport] = useState(false);
+  const [showSmsImport, setShowSmsImport] = useState(false);
 
   const monthlySpending = calculateMonthlySpending(expenses);
   const remainingBudget = monthlyLimit - monthlySpending;
@@ -57,6 +59,11 @@ const AddExpense = () => {
         onImport={(expenses) => {
           expenses.forEach((expense) => handleAddExpense(expense));
         }}
+      />
+      <SmsImport
+        open={showSmsImport}
+        onClose={() => setShowSmsImport(false)}
+        onImport={handleAddExpense}
       />
     </div>
   );

@@ -32,11 +32,10 @@ const Dashboard = () => {
     try {
       const csv = generateCSV(expenses);
       const filename = `expenses_${new Date().toISOString().split("T")[0]}.csv`;
-      const data = csv;
 
       // For browser downloads
       if (typeof window !== "undefined" && window.navigator) {
-        const blob = new Blob([data], { type: "text/csv;charset=utf-8" });
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
         saveAs(blob, filename);
       }
 
@@ -52,9 +51,6 @@ const Dashboard = () => {
         description: "There was an error exporting your expenses.",
       });
     }
-    const csv = generateCSV(expenses);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    saveAs(blob, `expenses_${new Date().toISOString().split("T")[0]}.csv`);
   };
 
   const monthlySpending = calculateMonthlySpending(expenses);

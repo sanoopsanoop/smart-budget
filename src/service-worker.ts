@@ -40,11 +40,8 @@ self.addEventListener("sync", (event) => {
 
 async function syncExpenses() {
   try {
-    const offlineData = await localforage.getItem("offlineExpenses");
-    if (offlineData) {
-      // Sync with your storage solution
-      await localforage.removeItem("offlineExpenses");
-    }
+    // Placeholder for offline sync functionality
+    console.log("Syncing expenses...");
   } catch (error) {
     console.error("Sync failed:", error);
   }

@@ -3,11 +3,18 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { Expense } from "@/lib/expense-utils";
 
 export const EXPENSE_CATEGORIES = [
-  { id: "food", label: "Food", icon: "🍕" },
-  { id: "housing", label: "Housing", icon: "🏠" },
-  { id: "traveling", label: "Traveling", icon: "✈️" },
-  { id: "entertainment", label: "Entertainment", icon: "🎮" },
-  { id: "others", label: "Others", icon: "📦" },
+  { id: "bills", label: "Bills", icon: "📄" },
+  { id: "emi", label: "EMI", icon: "📊" },
+  { id: "entertainment", label: "Entertainment", icon: "⭐" },
+  { id: "food", label: "Food & Drinks", icon: "🍴" },
+  { id: "fuel", label: "Fuel", icon: "⛽" },
+  { id: "groceries", label: "Groceries", icon: "🧺" },
+  { id: "health", label: "Health", icon: "❤️" },
+  { id: "investment", label: "Investment", icon: "💰" },
+  { id: "shopping", label: "Shopping", icon: "🛒" },
+  { id: "transfer", label: "Transfer", icon: "↔️" },
+  { id: "travel", label: "Travel", icon: "🏨" },
+  { id: "others", label: "Other", icon: "⋯" },
 ] as const;
 
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]["id"];

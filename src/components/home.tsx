@@ -12,11 +12,13 @@ import {
   calculateDailySpending,
   calculateMonthlySpending,
   calculateBudgetScore,
-  exportToCSV,
+  calculateSpendingTrend,
+  generateCSV,
   saveToLocalStorage,
   loadFromLocalStorage,
 } from "@/lib/expense-utils";
 import { subDays } from "date-fns";
+import { toast } from "@/components/ui/use-toast";
 
 const Home = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -49,15 +51,18 @@ const Home = () => {
 
   const handleExport = async () => {
     try {
-      const { data, filename } = await exportExpenses(expenses, {
-        format: "csv",
-        includeDescription: true,
-      });
+      const csv = generateCSV(expenses);
+      const filename = `expenses_${new Date().toISOString().split("T")[0]}.csv`;
 
       // For browser downloads
       if (typeof window !== "undefined" && window.navigator) {
-        const blob = new Blob([data], { type: "text/csv;charset=utf-8" });
-        saveAs(blob, filename);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
       }
 
       toast({
@@ -72,20 +77,17 @@ const Home = () => {
         description: "There was an error exporting your expenses.",
       });
     }
-    const csv = generateCSV(expenses);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "expenses.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
   };
 
   const monthlySpending = calculateMonthlySpending(expenses);
   const remainingBudget = monthlyLimit - monthlySpending;
   const dailyLimit = calculateDailyLimit(remainingBudget);
-  const budgetScore = calculateBudgetScore(monthlyLimit, expenses);
+  const spendingTrend = calculateSpendingTrend(expenses);
+  const budgetScore = calculateBudgetScore(
+    monthlySpending,
+    monthlyLimit,
+    spendingTrend,
+  );
 
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = subDays(new Date(), 6 - i);
